@@ -1,6 +1,6 @@
 # GGA GM Control Sheet
 
-Version 0.2.2 · For Foundry VTT 14 and GURPS 4e Game Aid 0.18.x. Requires libWrapper.
+Version 0.2.3 · For Foundry VTT 14 and GURPS 4e Game Aid 0.18.x. Requires libWrapper.
 
 View PCs and NPCs, make private GM checks, request player rolls, and apply group modifiers.
 

@@ -1,3 +1,4 @@
+import * as log from './log.mjs';
 import { ID } from './core.mjs';
 import { GMControlSheet } from './control-sheet.mjs';
 import {
@@ -66,7 +67,7 @@ Hooks.on('getSceneControlButtons', (controls) => {
 });
 Hooks.once('ready', () => {
   game.modules.get(ID).api = { open: openSheet };
-  reconcileResponses().catch((error) => console.error(`${ID} | Request tracking`, error));
+  reconcileResponses().catch((error) => log.error('Request tracking', error));
 });
 for (const hook of [
   'updateActor',
@@ -90,7 +91,7 @@ for (const hook of [
   Hooks.on(hook, () => sheet?.refresh());
 Hooks.on('renderChatMessageHTML', wireRequest);
 Hooks.on('createChatMessage', (message) => {
-  recordResponse(message).catch((error) => console.error(`${ID} | Request tracking`, error));
+  recordResponse(message).catch((error) => log.error('Request tracking', error));
   sheet?.tracker?.refresh();
   refreshRequestCards();
 });

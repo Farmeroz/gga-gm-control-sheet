@@ -1,3 +1,4 @@
+import * as log from './log.mjs';
 import { ID, escapeHTML as esc } from './core.mjs';
 import { option } from './dialogs.mjs';
 import { requestStatus, remindOutstanding, reconcileResponses } from './requests.mjs';
@@ -66,7 +67,7 @@ export class RequestTracker extends foundry.applications.api.ApplicationV2 {
         } else await reconcileResponses();
       } catch (error) {
         ui.notifications.error(error.message);
-        console.error(`${ID} | Request tracker`, error);
+        log.error('Request tracker', error);
       } finally {
         this.busy = false;
         await this.render({ force: true });

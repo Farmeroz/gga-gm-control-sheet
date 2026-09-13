@@ -1,3 +1,4 @@
+import * as log from './log.mjs';
 import {
   ID,
   DEFAULT_SHORTCUTS,
@@ -306,7 +307,7 @@ export class GMControlSheet extends App {
     result.addEventListener('drop', (e) => this.drop(e).catch((error) => this.error(error)));
   }
   error(error) {
-    console.error(`${ID} |`, error);
+    log.error(error);
     ui.notifications.error(error.message || String(error));
   }
   async handleChange(event) {
@@ -573,7 +574,7 @@ export class GMControlSheet extends App {
             label: shortcut.label,
             status: `Error: ${error.message}`,
           });
-          console.error(`${ID} | Roll`, error);
+          log.error('Roll', error);
         }
       }
     } finally {

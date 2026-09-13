@@ -1,3 +1,4 @@
+import * as log from './log.mjs';
 import {
   ID,
   clone,
@@ -310,7 +311,7 @@ export function wireRequest(message, html) {
       } catch (error) {
         button.disabled = false;
         ui.notifications.error(error.message);
-        console.error(`${ID} | Request`, error);
+        log.error('Request', error);
       } finally {
         inFlight.delete(key);
       }
