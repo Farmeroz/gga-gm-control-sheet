@@ -1,7 +1,8 @@
 node_modules/
 dist/
 stage/
-*.zip
-.DS_Store
 .cache/
 test-output/
+package-lock.json
+*.pdf
+*.zip

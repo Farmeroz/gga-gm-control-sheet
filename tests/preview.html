@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../styles/control-sheet.css" />
+    <style>
+      .gcs-window button{display:flex;align-items:center;justify-content:center}.gcs-window input[type=number]{display:block}body{margin:0;background:#0e161b;font-family:Arial,sans-serif;color:#eee} .window-header{height:32px;padding:0 12px;background:#0c1318;display:flex;align-items:center;font-size:12px;border-bottom:1px solid #52616a}.window-content{height:calc(100% - 32px);box-sizing:border-box}#gga-gm-control-sheet{margin:18px;border:1px solid #52616a;border-radius:9px;overflow:hidden;box-shadow:0 15px 50px #0008}.gcs-dialog{position:fixed;z-index:99;background:#263740;padding:18px;inset:5vh auto auto 50%;transform:translateX(-50%);max-height:88vh;overflow:auto;border:1px solid #62737e;border-radius:9px;width:560px;box-shadow:0 0 0 9999px #0008}.gcs-dialog input,.gcs-dialog select,.gcs-dialog textarea{background:#14242d;color:#eee;padding:7px;border:1px solid #74828a;border-radius:4px;font-size:13px}.gcs-dialog button{padding:8px 14px;margin:8px 6px 0 0;background:#d9b578;border:0;border-radius:4px}.gcs-dialog input[type=checkbox]{width:16px;height:16px}.gcs-dialog footer{position:sticky;bottom:-18px;background:#263740;padding:8px 0}.gcs-dialog h2{font-size:19px}
+    </style>
+  </head>
+  <body>
+    <script type="module">
+      const flags={};
+      class ApplicationV2 {
+       constructor(options={}){this.options=options;this.position={...this.constructor.DEFAULT_OPTIONS.position,...options.position};this.rendered=false;}
+       async render(){const context=await this._prepareContext();const result=await this._renderHTML(context);if(!this.element){this.element=document.createElement('section');this.element.id=this.constructor.DEFAULT_OPTIONS.id;this.element.className=this.constructor.DEFAULT_OPTIONS.classes.join(' ');this.element.style.width=`${this.position.width}px`;this.element.style.height=`${this.position.height}px`;this.element.innerHTML='<div class="window-header">▤ &nbsp; GM Control Sheet</div><div class="window-content"></div>';document.body.append(this.element);}this._replaceHTML(result,this.element.querySelector('.window-content'));this.rendered=true;return this;}
+       maximize(){} bringToFront(){} async _preClose(){} async close(){await this._preClose();this.element.remove();this.element=null;this.rendered=false;}
+      }
+      const DialogV2={wait:async o=>{if(o.content.tagName!=='DIV'||o.content.attributes.length)throw new Error('config.content element must have no attributes');return new Promise(resolve=>{let d=document.createElement('section');d.className='gcs-dialog';d.innerHTML=`<h2>${o.window.title}</h2><form>${o.content.outerHTML}<footer></footer></form>`;for(const b of o.buttons){let button=document.createElement('button');button.type='button';button.textContent=b.label;button.onclick=async e=>{try{const result=await b.callback(e,button,{element:d});d.remove();resolve(result);}catch(err){window.errors.push(err.message);}};d.querySelector('footer').append(button);}document.body.append(d);});}};
+      window.errors=[];window.notices=[];
+      window.foundry={applications:{api:{ApplicationV2,DialogV2}},utils:{getProperty:(o,p)=>p.split('.').reduce((a,k)=>a?.[k],o),randomID:()=>crypto.randomUUID().replaceAll('-','').slice(0,16)}};
+      window.ui={notifications:{info:m=>notices.push(m),warn:m=>notices.push(m),error:m=>errors.push(m)}};
+      window.CONFIG={statusEffects:[{id:'stunned',name:'Stunned'},{id:'prone',name:'Prone'}]};
+      const group=a=>Object.assign(a,{get:id=>a.find(x=>x.id===id),contents:a});
+      const users=group([{id:'gm',name:'Mark',isGM:true,active:true},{id:'phil',name:'Phil',isGM:false,active:true},{id:'squizz',name:'Squizz',isGM:false,active:true},{id:'offline',name:'Offline player',isGM:false,active:false}]);
+      users[0].getFlag=(_id,key)=>flags[key];users[0].setFlag=async(_id,key,value)=>flags[key]=value;
+      const colors=['#b99160','#b8bfc4','#6e8392','#a88265'];
+      const docs=new Map();
+      window.Actor=class {
+       constructor(id,name,owner,idx,token=false){this.id=id;this.name=name;this.owner=owner;this.documentName='Actor';this.uuid=token?`Scene.dock.Token.${id}.Actor.base`:`Actor.${id}`;this.img=`/tests/avatar${idx}.svg`;this.prototypeToken={texture:{src:`/tests/token${idx}.svg`}};this.flags={};this.statuses=new Set(idx===2?['stunned']:[]);this.system={HP:{value:idx===0?18:idx===2?7:12,max:idx===0?20:12},FP:{value:idx===0?13:10,max:14},attributes:{ST:{value:14},DX:{value:13},IQ:{value:14},HT:{value:12},PER:{value:idx===0?16:13},WILL:{value:idx===0?18:13}},currentmove:idx===2?3:6,currentdodge:9,vision:idx===0?18:13,hearing:14,frightcheck:idx===0?20:13,conditions:{posture:'standing',maneuver:'do_nothing'},skills:{'0':{name:'Observation',level:idx===0?18:14},'1':{name:'Search',level:13}},ads:{}};this.sheet={render:()=>notices.push('Opened sheet '+name)};docs.set(this.uuid,this);}
+       getFlag(id,key){return this.flags[key];} async setFlag(id,key,v){this.flags[key]=v;} testUserPermission(u){return u.isGM || u.id===this.owner;} getActiveTokens(){return [];} getOwners(){return users.filter(u=>u.id===this.owner);}
+      };
+      const luke=new Actor('luke','Luke Morningstar','phil',0);const zoe=new Actor('zoe','Zoé de Sancerre','phil',1);const g1=new Actor('guard1','Legion Guard · North Door',null,2,true);const g2=new Actor('guard2','Legion Guard · South Door',null,3,true);
+      const actors=group([luke,zoe]);
+      const scene={id:'dock',name:'Eveningstar · Arrival',async view(){canvas.scene=this;},tokens:[]};
+      const tokenDoc=a=>({id:a.id,uuid:`Scene.dock.Token.${a.id}`,documentName:'Token',name:a.name,actor:a,actorLink:false,actorId:'base',texture:a.prototypeToken.texture,parent:scene});
+      scene.tokens=group([tokenDoc(g1),tokenDoc(g2)]);scene.tokens.forEach(t=>docs.set(t.uuid,t));
+      window.fromUuid=async uuid=>docs.get(uuid);
+      window.canvas={scene,tokens:{controlled:[],placeables:[],get:()=>({center:{x:100,y:100},control:()=>{}})},animatePan:async()=>{}};
+      window.game={user:users[0],users,actors,scenes:group([scene]),messages:group([]),i18n:{localize:v=>v},settings:{get:()=>false},socket:{emit:(...x)=>notices.push(x)},keyboard:{isModifierActive:()=>false}};
+      window.GURPS={parselink:s=>({action:s.startsWith('S:')?{type:'skill-spell',name:s.slice(2).replaceAll('"',''),orig:s}:{type:'attribute',name:s,orig:s}}),performAction:async(a,actor)=>{const s=actor.system;return {target:a.type==='skill-spell'?Object.values(s.skills).find(x=>x.name===a.name)?.level:s.attributes[a.name.toUpperCase()]?.value??s[a.name.toLowerCase().replaceAll(' ','')],thing:a.name}},ModifierBucket:{modifierStack:{modifierList:[]}}};
+
+      GURPS.findSkillSpell=(system,name)=>Object.values(system.skills||{}).find(s=>s.name===name);
+      const calculate=async({action:a,actor,calcOnly})=>{if(!calcOnly)throw new Error('Display attempted a roll');const s=actor.system;return {target:a.type==='skill-spell'?GURPS.findSkillSpell(s,a.name)?.level:s.attributes[a.name.toUpperCase()]?.value??s[a.name.toLowerCase().replaceAll(' ','')],thing:a.name};};
+      GURPS.actionFuncs={attribute:calculate,'skill-spell':calculate};
+      GURPS.performAction=async(a,actor)=>{const result=await calculate({action:a,actor,calcOnly:true});if(!result.target){ui.notifications.warn('This character does not have a viable skill (effective level 3 or higher) that can be rolled');return false;}return result;};
+      window.ChatMessage={getWhisperRecipients:()=>[users[0]],create:async data=>{
+       const message={...data,id:foundry.utils.randomID(),timestamp:Date.now(),author:users.get(data.user),isRoll:!!data.rolls?.length,
+       getFlag(id,key){return this.flags?.[id]?.[key];},async update(changes){for(const [path,value] of Object.entries(changes)){const parts=path.split('.');let target=this;for(const key of parts.slice(0,-1))target=target[key]??={};target[parts.at(-1)]=value;}}};
+       game.messages.push(message);notices.push('Chat created');return message;}};
+      flags.preferences={roster:[{id:'l',uuid:luke.uuid,name:luke.name,group:'pc',fright:'auto',overrides:{}},{id:'z',uuid:zoe.uuid,name:zoe.name,group:'pc',fright:'auto',overrides:{}},{id:'g1',uuid:scene.tokens[0].uuid,name:g1.name,group:'npc',fright:'auto',overrides:{}},{id:'g2',uuid:scene.tokens[1].uuid,name:g2.name,group:'npc',fright:'auto',overrides:{}}],tab:'both'};
+      luke.flags.modifiers=[{id:'dark',name:'Darkness',value:-2,checks:['vision','observation','search']}];zoe.flags.modifiers=luke.flags.modifiers;
+      const {GMControlSheet}=await import('../scripts/control-sheet.mjs');window.sheet=new GMControlSheet();await sheet.render();window.ready=true;
+    </script>
+  </body>
+</html>

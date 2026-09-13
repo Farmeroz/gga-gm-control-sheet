@@ -1,0 +1,32 @@
+{
+  "name": "gga-gm-control-sheet",
+  "version": "0.2.3",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:setup": "node tools/gga-fixture.mjs",
+    "test": "node tests/run.mjs",
+    "test:browser": "node tests/browser.cjs && node tests/layout-browser.cjs",
+    "test:layout": "node tests/layout-browser.cjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check:syntax": "node tools/check-syntax.mjs",
+    "build": "node tools/build-release.mjs",
+    "check": "npm run format:check && npm run check:syntax && npm test && npm run test:browser && npm run build"
+  },
+  "devDependencies": {
+    "fflate": "0.8.2",
+    "linkedom": "0.18.13",
+    "playwright": "1.62.1",
+    "prettier": "3.9.6"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "description": "Development tools for GGA GM Control Sheet",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Farmeroz/gga-gm-control-sheet.git"
+  }
+}
