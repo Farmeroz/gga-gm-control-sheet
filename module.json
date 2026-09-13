@@ -34,12 +34,8 @@
       }
     ]
   },
-  "esmodules": [
-    "scripts/main.mjs"
-  ],
-  "styles": [
-    "styles/control-sheet.css"
-  ],
+  "esmodules": ["scripts/main.mjs"],
+  "styles": ["styles/control-sheet.css"],
   "socket": false,
   "url": "https://github.com/Farmeroz/gga-gm-control-sheet",
   "manifest": "https://github.com/Farmeroz/gga-gm-control-sheet/releases/latest/download/module.json",

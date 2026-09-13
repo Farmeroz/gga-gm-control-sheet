@@ -1,0 +1,8 @@
+node_modules/
+dist/
+stage/
+.cache/
+test-output/
+package-lock.json
+*.pdf
+*.zip
