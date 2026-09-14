@@ -34,6 +34,8 @@ const files = [
   'scripts/features.mjs',
   'scripts/log.mjs',
   'scripts/main.mjs',
+  'scripts/help.mjs',
+  'scripts/tooltip-engine.mjs',
   'scripts/modifiers.mjs',
   'scripts/request-tracker.mjs',
   'scripts/requests.mjs',

@@ -91,6 +91,7 @@ try {
     `Testing the packaged module with native GGA ${version} roll/calculator bodies; Foundry services are mocked.`,
   );
   const files = [
+    'tooltip.test.mjs',
     'core-tests.mjs',
     'resolve-tests.mjs',
     'features-tests.mjs',

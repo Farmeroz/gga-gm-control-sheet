@@ -2,7 +2,7 @@
   "id": "gga-gm-control-sheet",
   "title": "GGA GM Control Sheet",
   "description": "A GM overview for GURPS 4e Game Aid: PC and NPC rosters, private batch rolls, player roll requests, and group modifiers.",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "authors": [
     {
       "name": "Phil Brown",
@@ -34,12 +34,12 @@
       }
     ]
   },
-  "esmodules": ["scripts/main.mjs"],
+  "esmodules": ["scripts/main.mjs", "scripts/help.mjs"],
   "styles": ["styles/control-sheet.css"],
   "socket": false,
   "url": "https://github.com/Farmeroz/gga-gm-control-sheet",
   "manifest": "https://github.com/Farmeroz/gga-gm-control-sheet/releases/latest/download/module.json",
-  "download": "https://github.com/Farmeroz/gga-gm-control-sheet/releases/download/v0.2.3/gga-gm-control-sheet-v0.2.3.zip",
+  "download": "https://github.com/Farmeroz/gga-gm-control-sheet/releases/download/v0.2.4/gga-gm-control-sheet-v0.2.4.zip",
   "readme": "README.md",
   "license": "LICENSE.txt"
 }
