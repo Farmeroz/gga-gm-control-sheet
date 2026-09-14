@@ -47,6 +47,18 @@ const assert = require('node:assert/strict');
     page.on('pageerror', (e) => pageErrors.push(e.message));
     await page.goto(`http://127.0.0.1:${server.address().port}/tests/preview.html`);
     await page.waitForFunction(() => window.ready);
+    // Optional help must work on actual generated controls without invoking them.
+    await page.evaluate(async () => {
+      const previous = game.settings.get;
+      game.settings.get = (id, key) => (key === 'helpTooltips' ? true : previous(id, key));
+      (await import('/scripts/help.mjs')).helpController.start();
+    });
+    await page.locator('[data-gcs="request"]').focus();
+    await page.getByRole('tooltip').waitFor();
+    assert.match(await page.getByRole('tooltip').textContent(), /eligible players/);
+    await page.keyboard.press('Escape');
+    assert.equal(await page.getByRole('tooltip').count(), 0);
+
     const choose = async (selector, value) => {
       await page.locator(selector).selectOption(value);
       await page.waitForTimeout(50);

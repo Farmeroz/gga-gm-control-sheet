@@ -1,6 +1,6 @@
 # GGA GM Control Sheet
 
-Version 0.2.3 · For Foundry VTT 14 and GURPS 4e Game Aid 0.18.x. Requires libWrapper.
+Version 0.2.4 · For Foundry VTT 14 and GURPS 4e Game Aid 0.18.x. Requires libWrapper.
 
 View PCs and NPCs, make private GM checks, request player rolls, and apply group modifiers.
 
@@ -30,3 +30,7 @@ Report problems through [GitHub Issues](https://github.com/Farmeroz/gga-gm-contr
 Released under the MIT licence; see `LICENSE.txt`.
 
 An unofficial aid for GURPS Fourth Edition. GURPS is a trademark of Steve Jackson Games. This module is not affiliated with or endorsed by Steve Jackson Games, Foundry Gaming LLC, or the GURPS Game Aid maintainers.
+
+## Help tooltips
+
+Hover over a control or focus it with the keyboard for a short explanation. Press Escape to dismiss the help. Under **Configure Settings → Module Settings → GGA GM Control Sheet**, turn off **Show help tooltips** to hide optional help on your client. Labels, settings descriptions, and important notices remain visible. Other users keep their own preference.
