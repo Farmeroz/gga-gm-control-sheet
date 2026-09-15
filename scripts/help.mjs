@@ -4,6 +4,8 @@ export const helpConfig = {
   scope:
     '.gcs-window, .gcs-dialog, .gcs-request, [name^="gga-gm-control-sheet."], [data-key^="gga-gm-control-sheet."], [data-tool="gga-gm-control-sheet"], [data-control="gga-gm-control-sheet"]',
   actions: {
+    'casting-effect':
+      'Open the source caster’s Active effects window. Due maintenance and GM reviews are highlighted; received effects retain their original caster.',
     add: 'Choose actors to add to this GM roster.',
     tokens: 'Add the currently selected scene tokens to the roster.',
     select: 'Select every character currently visible in this roster view.',
@@ -19,9 +21,12 @@ export const helpConfig = {
     edit: 'Edit this roster entry’s options, shortcuts, and permissions.',
     remove: 'Remove this entry from the control-sheet roster; keep its actor and token.',
     summary: 'Post a GM-only chat summary of the latest control-sheet results.',
-    tracker: 'Open the player-request tracker to review completion and send reminders.',
+    tracker:
+      'Open requested roll results: completion, effective targets, dice, outcomes, and margins. This view is GM-only.',
   },
   fields: {
+    showCastingEffects:
+      'Show spells cast and effects received beside each character. Requires Casting Assistant 0.5.0 or later; click a badge to manage its caster’s effects.',
     scope:
       'Choose which roster characters receive the group action. Selection can include characters hidden by the current filter.',
     shortcut: 'Select the check used by the group roll or player request.',
@@ -50,7 +55,10 @@ export const helpConfig = {
       '[data-divider]',
       'Drag to resize these sections, or focus here and use the Up and Down arrow keys.',
     ],
-    ['[data-tracker="refresh"]', 'Refresh the completion status of player roll requests.'],
+    [
+      '[data-tracker="refresh"]',
+      'Refresh completion and collected results from the original roll messages.',
+    ],
     [
       '[data-tracker="remind"]',
       'Send a reminder to players with outstanding rolls on this request.',

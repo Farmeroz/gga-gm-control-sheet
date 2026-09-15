@@ -1,6 +1,6 @@
 # GGA GM Control Sheet
 
-Version 0.2.4 · For Foundry VTT 14 and GURPS 4e Game Aid 0.18.x. Requires libWrapper.
+Version 0.3.0 · For Foundry VTT 14 and GURPS 4e Game Aid 0.18.x. Requires libWrapper.
 
 View PCs and NPCs, make private GM checks, request player rolls, and apply group modifiers.
 
@@ -20,6 +20,12 @@ As GM, press **Alt+G**, click the clipboard button in the token controls, or use
 Drag the horizontal dividers below the character list and Group actions to resize the sections. Each section scrolls independently, and your arrangement is saved. To restore the default layout, open **Configure**, tick **Reset section sizes**, and click **Save**.
 
 See the [GGA GM Control Sheet User Guide](GGA-GM-Control-Sheet-User-Guide.pdf) for roster setup, private checks, player requests, modifiers, presets, and configuration.
+
+## Active effects and requested roll results
+
+With **Casting Assistant 0.5.0 or later** enabled, badges beside each character show spells they cast and effects they received, with remaining time or due maintenance. Click a badge to open the original caster's Active effects window. Self-cast effects appear once. The source records remain in Casting Assistant; the GM sheet does not duplicate timers or apply bonuses. Turn badges off under **Configure → Show Casting Assistant effects beside characters**. The module continues to work without Casting Assistant.
+
+Choose **Requested roll results** beside Latest GM results to collect each request's effective targets, dice totals, outcomes, and margins alongside outstanding respondents. The panel reads the original roll messages and is available only to GMs. Blind outcomes are never copied to the shared request card. Keep both the original request and its roll messages in chat; older rolls without summary metadata are labelled accordingly. Reminders retain the original request and do not create another result.
 
 ## Help
 

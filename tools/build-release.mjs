@@ -29,6 +29,8 @@ const files = [
   'LICENSE.txt',
   'GGA-GM-Control-Sheet-User-Guide.pdf',
   'scripts/control-sheet.mjs',
+  'scripts/casting-effects.mjs',
+  'scripts/request-results.mjs',
   'scripts/core.mjs',
   'scripts/dialogs.mjs',
   'scripts/features.mjs',

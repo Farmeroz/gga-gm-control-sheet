@@ -185,6 +185,7 @@ globalThis.document = window.document;
 globalThis.HTMLElement = window.HTMLElement;
 const { createRequests, wireRequest, recordResponse, requestReference, remindOutstanding } =
   await import('./request-test-module.mjs');
+const { collectedRequestResults } = await import('../scripts/request-results.mjs');
 const messages = [];
 messages.get = (id) => messages.find((m) => m.id === id);
 game.messages = messages;
@@ -274,4 +275,14 @@ test('clicking a reminder executes the native blind roll once and completes both
   game.user = users[0];
   await recordResponse(result);
   assert.deepEqual(original.flags[ID].responses, { 0: { rolled: true } });
+  const [collected] = await collectedRequestResults(original);
+  assert.equal(collected.total, result.rolls[0].total);
+  assert.equal(collected.target, result.flags[ID].result.target);
+  assert.equal(collected.margin, collected.target - collected.total);
+  assert.equal(collected.complete, true);
+  assert.equal(original.flags[ID].result, undefined);
+  assert.equal(original.content.includes('Critical success'), false);
+  game.user = users[1];
+  await assert.rejects(collectedRequestResults(original), /Only a GM/);
+  game.user = users[0];
 });

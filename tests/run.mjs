@@ -95,6 +95,7 @@ try {
     'core-tests.mjs',
     'resolve-tests.mjs',
     'features-tests.mjs',
+    'casting-effects-tests.mjs',
     'roll-tests.mjs',
     'request-integration-tests.mjs',
     'ui-model-tests.mjs',

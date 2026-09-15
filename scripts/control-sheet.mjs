@@ -32,6 +32,11 @@ import {
   importConfiguration,
 } from './features.mjs';
 import { applyCharacterModifier, removeCharacterModifiers, sendBuckets } from './modifiers.mjs';
+import {
+  castingEffectsFor,
+  castingEffectBadges,
+  manageCastingEffects,
+} from './casting-effects.mjs';
 
 const App = foundry.applications.api.ApplicationV2;
 const collection = (value) => value?.contents || Array.from(value || []);
@@ -168,7 +173,17 @@ export class GMControlSheet extends App {
             check = { missing: true };
           }
         }
-        return this.rowHTML(row, active, check);
+        let effects = [],
+          effectsError = '';
+        if (this.prefs.showCastingEffects !== false) {
+          try {
+            effects = await castingEffectsFor(row.actor);
+          } catch (error) {
+            effectsError = 'Effects unavailable';
+            log.error('Casting effects', error);
+          }
+        }
+        return this.rowHTML(row, active, check, effects, effectsError);
       }),
     );
     return { visible, rendered, active };
@@ -240,7 +255,7 @@ export class GMControlSheet extends App {
       <div class="gcs-action-buttons"><label class="gcs-check"><input type="checkbox" data-draft="includeBucket"${this.draft.includeBucket ? ' checked' : ''}> Include my bucket in GM rolls</label><div>${btn('roll', icon('eye-slash', 'Roll as GM'), 'class="gcs-primary"')}${btn('request', icon('comment-dots', 'Request rolls'))}${btn('modifiers', icon('plus-minus', 'Group modifiers'))}</div></div>
       <p class="gcs-hint">GM rolls are private.  All PCs / All NPCs include hidden rows; choose Visible characters to follow the filter.</p></div></div>
       <div class="gcs-divider" data-divider="1" role="separator" tabindex="0" aria-label="Resize Group actions and Latest GM results" aria-orientation="horizontal" aria-controls="gcs-group-actions gcs-latest-results" title="Drag to resize; use Up and Down arrow keys"></div>
-      <div class="gcs-results" id="gcs-latest-results" data-section="results" role="region" aria-label="Latest GM results"><div class="gcs-action-title"><strong>Latest GM results</strong><span>Visible only to you here</span>${btn('tracker', icon('list-check', 'Player requests'))}${this.results.length ? btn('summary', icon('comment', 'GM chat summary')) : ''}</div><div class="gcs-section-body">${this.results.length ? resultTable(this.results) : '<p class="gcs-hint">Results from your next batch will appear here.</p>'}</div></div></div>`;
+      <div class="gcs-results" id="gcs-latest-results" data-section="results" role="region" aria-label="Latest GM results"><div class="gcs-action-title"><strong>Latest GM results</strong><span>Visible only to you here</span>${btn('tracker', icon('list-check', 'Requested roll results'))}${this.results.length ? btn('summary', icon('comment', 'GM chat summary')) : ''}</div><div class="gcs-section-body">${this.results.length ? resultTable(this.results) : '<p class="gcs-hint">Results from your next batch will appear here.</p>'}</div></div></div>`;
     if (this.busy) root.classList.add('gcs-busy');
     return root;
   }
@@ -327,7 +342,7 @@ export class GMControlSheet extends App {
     } else if (el.dataset.draft && ['scope', 'shortcut'].includes(el.dataset.draft))
       await this.render({ force: true });
   }
-  rowHTML({ entry, actor, token }, shortcut, check) {
+  rowHTML({ entry, actor, token }, shortcut, check, effects = [], effectsError = '') {
     if (!actor)
       return `<tr class="gcs-missing"><td></td><td colspan="${this.prefs.columns.length + 3}">Missing: ${esc(entry.name || entry.uuid)}</td><td>${btn('remove', icon('trash'), `data-id="${entry.id}" title="Remove missing entry"`)}</td></tr>`;
     const tokenImage = token?.texture?.src || actor.prototypeToken?.texture?.src;
@@ -373,6 +388,7 @@ export class GMControlSheet extends App {
       <td class="gcs-character"><div class="gcs-identity">${btn('sheet', `<img src="${esc(imagePath(actor.img))}" alt="${esc(actor.name)}">`, `class="gcs-portrait" data-id="${entry.id}" title="Open character sheet"`)}
       ${dual ? btn('locate', `<img src="${esc(imagePath(tokenImage))}" alt="Token for ${esc(actor.name)}">`, `class="gcs-token-art" data-id="${entry.id}" title="Locate token"`) : ''}
       <div class="gcs-identity-text">${btn('sheet', esc(entry.name || token?.name || actor.name), `class="gcs-character-name" data-id="${entry.id}" title="Open character sheet"`)}<small>${esc(scene)}${this.prefs.tab === 'both' ? ` · ${entry.group === 'pc' ? 'PC' : 'NPC'}` : ''}</small>${dual && token && token.name !== actor.name ? `<small>${esc(actor.name)}</small>` : ''}</div></div>
+      ${castingEffectBadges(effects)}${effectsError ? `<small class="gcs-muted">${esc(effectsError)}</small>` : ''}
       ${alerts.length ? `<div class="gcs-condition-chips">${alerts.map((a) => `<span class="gcs-alert-${a.severity}" title="${esc(a.detail)}">${esc(a.label)}</span>`).join('')}</div>` : ''}
       ${mods.length ? `<div class="gcs-mod-chips">${mods.map((m) => `<span title="${esc(m.checks === 'all' ? 'All control-sheet checks' : m.checks.join(', '))}">${esc(signed(m.value))} ${esc(m.name)}</span>`).join('')}</div>` : ''}</td>
       ${this.prefs.columns.map((c) => `<td class="${['posture', 'maneuver', 'conditions'].includes(c) ? 'gcs-text-stat' : 'gcs-number'} ${alerts.find((a) => a.stat === c) ? 'gcs-resource-alert' : ''}">${esc(values[c])}</td>`).join('')}
@@ -382,6 +398,7 @@ export class GMControlSheet extends App {
   }
   async handleAction(action, el) {
     const id = el.dataset.id;
+    if (action === 'casting-effect') return manageCastingEffects(el.dataset.caster);
     if (action === 'tab') {
       this.prefs.tab = el.dataset.tab;
       await this.save();
@@ -897,6 +914,12 @@ export class GMControlSheet extends App {
           'Highlight low HP/FP and marked conditions',
           this.prefs.highlightConditions,
         ) +
+        checkbox(
+          'showCastingEffects',
+          'yes',
+          'Show Casting Assistant effects beside characters (0.5.0+)',
+          this.prefs.showCastingEffects !== false,
+        ) +
         checkbox('resetSectionSizes', 'yes', 'Reset section sizes') +
         '<p>Save changes before exporting or opening Presets.  Export uses your saved settings.</p>' +
         '<p>One shortcut per line: <code>Label | OtF</code>.  Use a single attribute, skill, spell, or self-control roll.  Example: <code>Observation | S:"Observation"</code>.</p>' +
@@ -949,6 +972,7 @@ export class GMControlSheet extends App {
     this.prefs.columns = data.getAll('columns');
     this.prefs.shortcuts = shortcuts;
     this.prefs.highlightConditions = !!data.get('highlightConditions');
+    this.prefs.showCastingEffects = !!data.get('showCastingEffects');
     await this.save();
     await this.render({ force: true });
   }
@@ -981,7 +1005,7 @@ export class GMControlSheet extends App {
     const incoming = parseConfiguration(await file.text(), (otf) => GURPS.parselink(otf).action);
     const review = await formDialog(
       'Review configuration import',
-      `<p>This replaces your saved columns, checks, presets, and highlighting preference.</p><p><strong>Columns:</strong> ${incoming.columns.map((c) => esc(COLUMNS[c])).join(', ') || 'None'}</p>` +
+      `<p>This replaces your saved columns, checks, presets, and display preferences.</p><p><strong>Columns:</strong> ${incoming.columns.map((c) => esc(COLUMNS[c])).join(', ') || 'None'}</p>` +
         ['pc', 'npc']
           .map(
             (g) =>
@@ -1008,6 +1032,7 @@ export class GMControlSheet extends App {
             .join('; ') || 'None'
         }</p>` +
         `<p><strong>Condition highlighting:</strong> ${incoming.highlightConditions ? 'On' : 'Off'}</p>` +
+        `<p><strong>Casting Assistant effects:</strong> ${incoming.showCastingEffects ? 'On' : 'Off'}</p>` +
         '<p>Your roster, individual overrides, assigned character modifiers, and chat requests remain in this world.  Matching check names retain their local links.  Review assigned modifiers if you replace or remove checks.</p>',
       'Import configuration',
       650,

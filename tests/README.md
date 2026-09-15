@@ -67,3 +67,7 @@ Use this checklist when changing roll integration, supported Foundry/GGA version
 | Spell with a college-tagged modifier                                  | The matching modifier affects the target; no spell cost, script, or combat action is triggered.                                                      |
 | Existing critical-success or dice-display modules                     | Classification, display, privacy, and attribution remain consistent with the world's configuration.                                                  |
 | Resize sections, refresh, and reopen the sheet                        | Sizes and scrolling remain usable, preferences are retained, and Configure can reset section sizes.                                                  |
+
+## Casting Assistant and request summaries
+
+Integration tests cover the optional Casting Assistant API, received-effect routing, due badges, escaping and GM access. The native GGA request test verifies result metadata, collection from the original blind roll, and completion-only storage on shared request cards. Browser checks include effect badges and the results table. Live checks: enable both updated modules; cast an effect on a roster character; inspect the caster and recipient badges; advance time; open the caster from the recipient's badge. Request a blind group check with a connected player and compare the collected target, dice and margin to the original roll.
