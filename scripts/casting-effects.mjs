@@ -8,7 +8,7 @@ export async function castingEffectsFor(actor) {
   return Array.isArray(effects)
     ? effects.filter(
         (e) =>
-          e.schema === 1 &&
+          [1, 2].includes(e.schema) &&
           e.actorUuid === actor.uuid &&
           ['active', 'due', 'review'].includes(e.state),
       )
@@ -18,7 +18,16 @@ export function castingEffectBadges(effects) {
   if (!effects?.length) return '';
   return `<div class="gcs-casting-effects">${effects
     .map((e) => {
-      const role = e.cast && e.received ? 'Self' : e.cast ? 'Cast' : 'Received';
+      const role =
+        e.cast && (e.received || e.pending)
+          ? e.pending
+            ? 'Self · pending'
+            : 'Self'
+          : e.cast
+            ? 'Cast'
+            : e.pending
+              ? 'Pending'
+              : 'Received';
       const time =
         e.state === 'due'
           ? 'Maintenance due'
@@ -32,14 +41,14 @@ export function castingEffectBadges(effects) {
                   ? `${Math.ceil(e.remaining / 60)}m`
                   : `${Math.ceil(e.remaining / 3600)}h`;
       const detail = `${e.name} · ${role} · Caster: ${e.casterName} · ${time}${e.maintainable ? ` · Maintenance: ${e.maintenanceCost} energy` : ''}${e.recipientNames?.length ? ` · Recipients: ${e.recipientNames.join(', ')}` : ''}${e.summary ? ` · ${e.summary}` : ''}`;
-      return `<button type="button" data-gcs="casting-effect" data-caster="${esc(e.casterUuid)}" class="gcs-casting-effect ${e.state !== 'active' ? 'is-due' : ''}" title="${esc(detail)}"><span>${esc(role)}: ${esc(e.name)}</span><small>${esc(time)}</small></button>`;
+      return `<button type="button" data-gcs="casting-effect" data-caster="${esc(e.casterUuid)}" data-effect="${esc(e.id)}" class="gcs-casting-effect ${e.state !== 'active' || e.pending ? 'is-due' : ''}" title="${esc(detail)}"><span>${esc(role)}: ${esc(e.name)}${!e.cast ? ` · from ${esc(e.casterName)}` : ''}</span><small>${esc(time)}</small></button>`;
     })
     .join('')}</div>`;
 }
-export async function manageCastingEffects(casterUuid) {
+export async function manageCastingEffects(casterUuid, effectId = null) {
   if (!game.user.isGM) throw new Error('Only a GM can manage effects from this sheet.');
   const mod = game.modules?.get(moduleId);
   if (!mod?.active || typeof mod.api?.activeEffects !== 'function')
     throw new Error('Enable Casting Assistant 0.5.0 or later to manage these effects.');
-  return mod.api.activeEffects(casterUuid);
+  return mod.api.activeEffects(casterUuid, effectId);
 }

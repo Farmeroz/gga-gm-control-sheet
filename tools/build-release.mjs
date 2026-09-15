@@ -45,6 +45,7 @@ const files = [
   'scripts/roll-modifiers.mjs',
   'scripts/rolls.mjs',
   'scripts/section-layout.mjs',
+  'scripts/roster.mjs',
   'styles/control-sheet.css',
 ];
 for (const path of [...manifest.esmodules, ...manifest.styles, manifest.readme, manifest.license]) {

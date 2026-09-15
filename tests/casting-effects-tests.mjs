@@ -55,3 +55,36 @@ test('players cannot read or manage effects through the GM integration', async (
   await assert.rejects(manageCastingEffects('Actor.caster'), /Only a GM/);
   game.user.isGM = true;
 });
+test('pending target summaries name the caster and focus the original effect', async () => {
+  const effect = {
+    schema: 2,
+    id: 'sleep-2',
+    actorUuid: actor.uuid,
+    casterUuid: 'Actor.mage',
+    casterName: 'Roselyn',
+    name: 'Sleep',
+    cast: false,
+    received: false,
+    pending: true,
+    state: 'active',
+    remaining: 60,
+  };
+  let opened;
+  game.modules.set('gga-casting-assistant', {
+    active: true,
+    api: {
+      getActiveEffects: async () => [effect],
+      activeEffects: async (...args) => {
+        opened = args;
+      },
+    },
+  });
+  const html = castingEffectBadges(await castingEffectsFor(actor));
+  assert.match(html, /Pending: Sleep · from Roselyn/);
+  assert.doesNotMatch(html, /Received:/);
+  assert.match(html, /data-effect="sleep-2"/);
+  await manageCastingEffects(effect.casterUuid, effect.id);
+  assert.deepEqual(opened, ['Actor.mage', 'sleep-2']);
+  effect.cast = true;
+  assert.match(castingEffectBadges([effect]), /Self · pending: Sleep/);
+});

@@ -5,9 +5,10 @@ export const helpConfig = {
     '.gcs-window, .gcs-dialog, .gcs-request, [name^="gga-gm-control-sheet."], [data-key^="gga-gm-control-sheet."], [data-tool="gga-gm-control-sheet"], [data-control="gga-gm-control-sheet"]',
   actions: {
     'casting-effect':
-      'Open the source caster’s Active effects window. Due maintenance and GM reviews are highlighted; received effects retain their original caster.',
-    add: 'Choose actors to add to this GM roster.',
-    tokens: 'Add the currently selected scene tokens to the roster.',
+      'Open the source caster’s Active effects window. Due maintenance and GM reviews are highlighted; confirmed received effects and pending resistance retain their original caster. Resolve each target in that window.',
+    add: 'Choose characters for the roster. Their current-scene tokens are shown automatically; the actor record appears when no tokens are present.',
+    tokens:
+      'Add the selected tokens’ characters. The roster follows their tokens on the viewed scene, with an actor fallback and no duplicate actor/token rows.',
     select: 'Select every character currently visible in this roster view.',
     clear: 'Clear the selection across both rosters.',
     roll: 'Make private GM rolls for the characters in the chosen scope, using the selected check and modifiers.',
@@ -16,10 +17,11 @@ export const helpConfig = {
       'Manage modifiers for the characters in the chosen scope, or send a modifier to players’ buckets.',
     refresh: 'Refresh the displayed roster and actor values.',
     settings: 'Configure the roster display, shortcuts, and layout.',
-    sheet: 'Open this character’s sheet.',
+    sheet: 'Open the exact token or actor sheet represented by this row.',
     locate: 'Locate the associated token on its scene.',
     edit: 'Edit this roster entry’s options, shortcuts, and permissions.',
-    remove: 'Remove this entry from the control-sheet roster; keep its actor and token.',
+    remove:
+      'Remove this character’s saved roster sources and their rows. The actor and scene tokens are kept.',
     summary: 'Post a GM-only chat summary of the latest control-sheet results.',
     tracker:
       'Open requested roll results: completion, effective targets, dice, outcomes, and margins. This view is GM-only.',
