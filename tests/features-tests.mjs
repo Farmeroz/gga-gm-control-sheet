@@ -148,6 +148,7 @@ test('configuration round-trip preserves allowed settings and excludes roster, s
     roster: [{ uuid: 'Actor.secret' }],
     position: { left: 99 },
     requestHistory: 'secret',
+    showCastingEffects: false,
   });
   prefs.presets = [{ id: 'dark', label: 'Night', name: 'Darkness', value: -2, checks: ['dx'] }];
   const json = JSON.stringify(exportConfiguration(prefs)),
@@ -160,6 +161,7 @@ test('configuration round-trip preserves allowed settings and excludes roster, s
   destination.shortcuts.npc[7].id = 'localdx';
   const imported = importConfiguration(destination, parsed, () => `new${++counter}`);
   assert.deepEqual(imported.roster, destination.roster);
+  assert.equal(imported.showCastingEffects, false);
   assert.deepEqual(imported.presets[0].checks, ['localdx']);
   assert.equal(imported.shortcuts.pc.find((s) => s.label === 'DX').id, 'localdx');
 });

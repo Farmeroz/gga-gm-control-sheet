@@ -165,6 +165,18 @@ export async function publishRollContext(context) {
         roll: true,
         request: context.request,
         check: { version: 1, actorUuid: context.actor.uuid, otf: context.otf, mode: context.mode },
+        result: {
+          version: 1,
+          target: context.result.finaltarget,
+          total: context.result.rtotal,
+          margin: context.result.margin,
+          status: context.result.failure ? 'Failure' : 'Success',
+          critical: context.result.isCritSuccess
+            ? 'Critical success'
+            : context.result.isCritFailure
+              ? 'Critical failure'
+              : '',
+        },
       };
     ChatMessage.applyRollMode(clean, context.mode);
     clean.blind = context.mode === 'blindroll';

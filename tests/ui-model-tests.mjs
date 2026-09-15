@@ -290,3 +290,49 @@ assert.equal(errors.length, 0);
 console.log(
   'UI model checks passed: mixed selection, subset/all modifier updates and removal, actor-specific player requests, reorder/group change, OtF override, escaped names, generated HTML.',
 );
+
+// Scene-following rows bind all actions to the displayed token, not its base actor.
+const liveLuke = new Actor('luke-live', 'Luke on scene', 'phil', 0, true);
+liveLuke.system.HP.value = 16;
+const liveToken = tokenDoc(liveLuke);
+liveToken.actorId = luke.id;
+scene.tokens.push(liveToken);
+docs.set(liveToken.uuid, liveToken);
+await assert.rejects(sheet.targetRows(), /scene roster changed/);
+const tokenRow = sheet.rows.find((r) => r.token?.uuid === liveToken.uuid);
+assert.ok(tokenRow);
+assert.equal(tokenRow.actor, liveLuke);
+assert.equal(
+  sheet.rows.some((r) => r.actor === luke),
+  false,
+);
+sheet.draft.scope = 'pc';
+assert.equal((await sheet.targetRows())[0].actor, liveLuke);
+let openedActor;
+liveLuke.sheet = {
+  render: () => {
+    openedActor = liveLuke.uuid;
+  },
+};
+await sheet.handleAction('sheet', { dataset: { id: tokenRow.entry.id } });
+assert.equal(openedActor, liveLuke.uuid);
+await sheet.handleChange({
+  target: { dataset: { adjust: tokenRow.entry.id }, value: '-4', hasAttribute: () => false },
+});
+await sheet.render();
+assert.equal(sheet.rows.find((r) => r.token?.uuid === liveToken.uuid).entry.adjustment, -4);
+assert.equal(sheet.prefs.roster.find((e) => e.id === 'l').adjustment, undefined);
+responses.push({
+  audience: 'whisper',
+  mode: 'blindroll',
+  instruction: 'Scene check',
+  users: ['phil'],
+});
+await sheet.requestRolls();
+const sceneRequest = game.messages.at(-1).flags['gga-gm-control-sheet'].requestData.entries[0];
+assert.equal(sceneRequest.uuid, liveLuke.uuid);
+assert.equal(sceneRequest.entry.tokenUuid, liveToken.uuid);
+scene.tokens.splice(scene.tokens.indexOf(liveToken), 1);
+await assert.rejects(sheet.targetRows(), /scene roster changed/);
+assert.equal(sheet.rows.find((r) => r.entry.id === 'l').actor, luke);
+assert.equal(sceneRequest.uuid, liveLuke.uuid); // Already-issued requests never change their target.

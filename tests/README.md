@@ -67,3 +67,13 @@ Use this checklist when changing roll integration, supported Foundry/GGA version
 | Spell with a college-tagged modifier                                  | The matching modifier affects the target; no spell cost, script, or combat action is triggered.                                                      |
 | Existing critical-success or dice-display modules                     | Classification, display, privacy, and attribution remain consistent with the world's configuration.                                                  |
 | Resize sections, refresh, and reopen the sheet                        | Sizes and scrolling remain usable, preferences are retained, and Configure can reset section sizes.                                                  |
+
+## Casting Assistant and request summaries
+
+Integration tests cover the optional Casting Assistant API, received-effect routing, due badges, escaping and GM access. The native GGA request test verifies result metadata, collection from the original blind roll, and completion-only storage on shared request cards. Browser checks include effect badges and the results table. Live checks: enable both updated modules; cast an effect on a roster character; inspect the caster and recipient badges; advance time; open the caster from the recipient's badge. Request a blind group check with a connected player and compare the collected target, dice and margin to the original roll.
+
+## Current-scene roster and target outcomes
+
+Roster tests cover Actor/Token deduplication, multiple unlinked copies, explicit token settings, scene following, fallback after token deletion, and linked actor identity. UI integration exercises a scene change before an action, token sheet opening, independent row adjustment and request UUIDs that remain bound to their original token.
+
+In Foundry, add Roselyn from both Actor and Token: expect one row for each current-scene token, correct token HP/FP, and no separate Actor row. Change scenes and repeat with multiple unlinked NPC copies. Check a pending spell, then confirm one target affected and another resisted in Casting Assistant. The affected row shows the caster and the pending/resisted displays update independently.

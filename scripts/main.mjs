@@ -70,6 +70,7 @@ Hooks.once('ready', () => {
   reconcileResponses().catch((error) => log.error('Request tracking', error));
 });
 for (const hook of [
+  'updateWorldTime',
   'updateActor',
   'updateToken',
   'deleteActor',

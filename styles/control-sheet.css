@@ -829,3 +829,41 @@
     padding: 0 10px 10px;
   }
 }
+
+/* Optional Casting Assistant summaries keep the existing table columns intact. */
+.gcs-casting-effects {
+  display: grid;
+  gap: 4px;
+  margin-top: 6px;
+}
+.gcs-root .gcs-casting-effect {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  justify-content: space-between;
+  white-space: normal;
+  text-align: left;
+  padding: 4px 6px;
+  max-width: 100%;
+  font-size: 11px;
+  border: 1px solid #526776;
+  border-radius: 5px;
+}
+.gcs-casting-effect span {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.gcs-root .gcs-casting-effect.is-due {
+  border-color: #d7ad69;
+  color: #f1ca85;
+}
+.gcs-casting-effect small {
+  font-size: 10px;
+  white-space: nowrap;
+}
+.gcs-tracker .gcs-results-table {
+  min-width: 680px;
+}
+.gcs-tracker-list {
+  overflow: auto;
+}

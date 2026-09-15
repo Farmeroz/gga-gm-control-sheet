@@ -57,6 +57,7 @@ export function upgradePreferences(saved = {}) {
   }
   prefs.presets ??= [];
   prefs.highlightConditions ??= true;
+  prefs.showCastingEffects ??= true;
   prefs.filter ??= 'all';
   prefs.schemaVersion = PREFERENCES_VERSION;
   return prefs;

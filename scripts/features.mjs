@@ -120,6 +120,7 @@ export function exportConfiguration(prefs) {
       shortcuts: prefs.shortcuts,
       presets: prefs.presets || [],
       highlightConditions: prefs.highlightConditions !== false,
+      showCastingEffects: prefs.showCastingEffects !== false,
     }),
   };
 }
@@ -173,7 +174,15 @@ export function parseConfiguration(text, parseAction) {
     throw new Error('Preset names and identifiers must be unique.');
   if (typeof source.highlightConditions !== 'boolean')
     throw new Error('Invalid condition highlighting setting.');
-  return { columns, shortcuts, presets, highlightConditions: source.highlightConditions };
+  if (source.showCastingEffects !== undefined && typeof source.showCastingEffects !== 'boolean')
+    throw new Error('Invalid Casting Assistant effects setting.');
+  return {
+    columns,
+    shortcuts,
+    presets,
+    highlightConditions: source.highlightConditions,
+    showCastingEffects: source.showCastingEffects !== false,
+  };
 }
 export function importConfiguration(prefs, incoming, randomID) {
   // Retain local identities for matching check names, so roster overrides and
@@ -195,6 +204,7 @@ export function importConfiguration(prefs, incoming, randomID) {
   const result = clone(prefs);
   result.columns = clone(incoming.columns);
   result.highlightConditions = incoming.highlightConditions;
+  result.showCastingEffects = incoming.showCastingEffects !== false;
   result.shortcuts = Object.fromEntries(
     ['pc', 'npc'].map((g) => [g, incoming.shortcuts[g].map((s) => ({ ...s, id: ids.get(s.id) }))]),
   );

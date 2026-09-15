@@ -23,6 +23,7 @@ import { resolveRoll, rollOne, resultTable } from './rolls.mjs';
 import { createRequests } from './requests.mjs';
 import { RequestTracker } from './request-tracker.mjs';
 import { SectionLayout } from './section-layout.mjs';
+import { sceneRoster, rosterIdentity } from './roster.mjs';
 import {
   rowMatchesFilter,
   conditionHighlights,
@@ -32,6 +33,11 @@ import {
   importConfiguration,
 } from './features.mjs';
 import { applyCharacterModifier, removeCharacterModifiers, sendBuckets } from './modifiers.mjs';
+import {
+  castingEffectsFor,
+  castingEffectBadges,
+  manageCastingEffects,
+} from './casting-effects.mjs';
 
 const App = foundry.applications.api.ApplicationV2;
 const collection = (value) => value?.contents || Array.from(value || []);
@@ -149,13 +155,36 @@ export class GMControlSheet extends App {
       return { entry, actor: null, token: null };
     }
   }
+  async resolveRoster() {
+    const resolved = await Promise.all(this.prefs.roster.map((e) => this.resolveEntry(e)));
+    for (const row of resolved) {
+      const family = row.token?.actorId ? `Actor.${row.token.actorId}` : row.actor?.uuid;
+      if (family) this.prefs.roster.find((e) => e.id === row.entry.id).actorUuid = family;
+      row.entry.actorUuid ||= family;
+    }
+    return sceneRoster(resolved, canvas.scene);
+  }
+  sourceEntry(id) {
+    const row = this.rows.find((r) => r.entry.id === id);
+    return this.prefs.roster.find((e) => e.id === (row?.entry.sourceId || id));
+  }
+  async checkedRow(id) {
+    const live = await this.resolveRoster();
+    if (rosterIdentity(live) !== rosterIdentity(this.rows)) {
+      await this.render({ force: true });
+      throw new Error('The scene roster changed. Review the refreshed rows and try again.');
+    }
+    return live.find((r) => r.entry.id === id);
+  }
   async _prepareContext() {
     if (!game.user.isGM) throw new Error('The GM Control Sheet is available only to GMs.');
     if (this._saveOnOpen) {
       await this.save();
       this._saveOnOpen = false;
     }
-    this.rows = await Promise.all(this.prefs.roster.map((e) => this.resolveEntry(e)));
+    this.rows = await this.resolveRoster();
+    const rowIds = new Set(this.rows.map((r) => r.entry.id));
+    this.selection = new Set([...this.selection].filter((id) => rowIds.has(id)));
     const active = this.shortcut;
     const visible = this.visibleRows();
     const rendered = await Promise.all(
@@ -168,18 +197,38 @@ export class GMControlSheet extends App {
             check = { missing: true };
           }
         }
-        return this.rowHTML(row, active, check);
+        let effects = [],
+          effectsError = '';
+        if (this.prefs.showCastingEffects !== false) {
+          try {
+            effects = await castingEffectsFor(row.actor);
+          } catch (error) {
+            effectsError = 'Effects unavailable';
+            log.error('Casting effects', error);
+          }
+        }
+        return this.rowHTML(row, active, check, effects, effectsError);
       }),
     );
     return { visible, rendered, active };
   }
   targetEntries() {
     if (this.draft.scope === 'visible') return this.visibleRows().map((r) => r.entry);
-    return scopedEntries(this.prefs.roster, this.draft.scope, this.selection, this.prefs.tab);
+    return scopedEntries(
+      this.rows.map((r) => r.entry),
+      this.draft.scope,
+      this.selection,
+      this.prefs.tab,
+    );
   }
   async targetRows(single = null) {
+    const live = await this.resolveRoster();
+    if (rosterIdentity(live) !== rosterIdentity(this.rows)) {
+      await this.render({ force: true });
+      throw new Error('The scene roster changed. Review the refreshed rows and try again.');
+    }
     const entries = single
-      ? this.prefs.roster.filter((e) => e.id === single)
+      ? this.rows.map((r) => r.entry).filter((e) => e.id === single)
       : this.targetEntries();
     if (!entries.length)
       throw new Error('Select characters or choose PCs, NPCs, or Both in the action scope.');
@@ -206,7 +255,7 @@ export class GMControlSheet extends App {
         .map(([g, label]) =>
           btn(
             'tab',
-            `${label} <span>${this.prefs.roster.filter((e) => g === 'both' || e.group === g).length}</span>`,
+            `${label} <span>${this.rows.filter((r) => g === 'both' || r.entry.group === g).length}</span>`,
             `data-tab="${g}" aria-pressed="${g === this.prefs.tab}"`,
           ),
         )
@@ -240,7 +289,7 @@ export class GMControlSheet extends App {
       <div class="gcs-action-buttons"><label class="gcs-check"><input type="checkbox" data-draft="includeBucket"${this.draft.includeBucket ? ' checked' : ''}> Include my bucket in GM rolls</label><div>${btn('roll', icon('eye-slash', 'Roll as GM'), 'class="gcs-primary"')}${btn('request', icon('comment-dots', 'Request rolls'))}${btn('modifiers', icon('plus-minus', 'Group modifiers'))}</div></div>
       <p class="gcs-hint">GM rolls are private.  All PCs / All NPCs include hidden rows; choose Visible characters to follow the filter.</p></div></div>
       <div class="gcs-divider" data-divider="1" role="separator" tabindex="0" aria-label="Resize Group actions and Latest GM results" aria-orientation="horizontal" aria-controls="gcs-group-actions gcs-latest-results" title="Drag to resize; use Up and Down arrow keys"></div>
-      <div class="gcs-results" id="gcs-latest-results" data-section="results" role="region" aria-label="Latest GM results"><div class="gcs-action-title"><strong>Latest GM results</strong><span>Visible only to you here</span>${btn('tracker', icon('list-check', 'Player requests'))}${this.results.length ? btn('summary', icon('comment', 'GM chat summary')) : ''}</div><div class="gcs-section-body">${this.results.length ? resultTable(this.results) : '<p class="gcs-hint">Results from your next batch will appear here.</p>'}</div></div></div>`;
+      <div class="gcs-results" id="gcs-latest-results" data-section="results" role="region" aria-label="Latest GM results"><div class="gcs-action-title"><strong>Latest GM results</strong><span>Visible only to you here</span>${btn('tracker', icon('list-check', 'Requested roll results'))}${this.results.length ? btn('summary', icon('comment', 'GM chat summary')) : ''}</div><div class="gcs-section-body">${this.results.length ? resultTable(this.results) : '<p class="gcs-hint">Results from your next batch will appear here.</p>'}</div></div></div>`;
     if (this.busy) root.classList.add('gcs-busy');
     return root;
   }
@@ -321,13 +370,22 @@ export class GMControlSheet extends App {
       else this.selection.delete(el.dataset.select);
       await this.render({ force: true });
     } else if (el.dataset.adjust) {
-      const entry = this.prefs.roster.find((e) => e.id === el.dataset.adjust);
-      entry.adjustment = integer(el.value);
+      const row = await this.checkedRow(el.dataset.adjust);
+      const entry = this.sourceEntry(el.dataset.adjust);
+      if (!row || !entry) throw new Error('This roster entry is unavailable.');
+      if (row.token && row.entry.uuid !== entry.uuid) {
+        entry.tokenAdjustments ??= {};
+        entry.tokenAdjustments[row.token.uuid] = integer(el.value);
+      } else entry.adjustment = integer(el.value);
+      row.entry.adjustment = integer(el.value);
+      Object.assign(this.rows.find((r) => r.entry.id === el.dataset.adjust).entry, {
+        adjustment: row.entry.adjustment,
+      });
       await this.save();
     } else if (el.dataset.draft && ['scope', 'shortcut'].includes(el.dataset.draft))
       await this.render({ force: true });
   }
-  rowHTML({ entry, actor, token }, shortcut, check) {
+  rowHTML({ entry, actor, token }, shortcut, check, effects = [], effectsError = '') {
     if (!actor)
       return `<tr class="gcs-missing"><td></td><td colspan="${this.prefs.columns.length + 3}">Missing: ${esc(entry.name || entry.uuid)}</td><td>${btn('remove', icon('trash'), `data-id="${entry.id}" title="Remove missing entry"`)}</td></tr>`;
     const tokenImage = token?.texture?.src || actor.prototypeToken?.texture?.src;
@@ -358,8 +416,9 @@ export class GMControlSheet extends App {
     const mods = actor.getFlag(ID, 'modifiers') || [];
     const applicable = shortcut ? modifiersFor(actor, shortcut) : [];
     const tooltip = applicable.map((m) => `${signed(m.value)} ${m.name}`).join('; ');
-    const scene =
-      token?.parent?.name || (actor.getActiveTokens?.().length ? 'On this scene' : 'Actor roster');
+    const scene = token
+      ? `Scene token · ${token.parent?.name || 'Scene'}`
+      : 'Actor record · no token on this scene';
     const checkCell = check?.exempt
       ? '<span class="gcs-pill">Exempt</span>'
       : !check || check.missing
@@ -373,6 +432,7 @@ export class GMControlSheet extends App {
       <td class="gcs-character"><div class="gcs-identity">${btn('sheet', `<img src="${esc(imagePath(actor.img))}" alt="${esc(actor.name)}">`, `class="gcs-portrait" data-id="${entry.id}" title="Open character sheet"`)}
       ${dual ? btn('locate', `<img src="${esc(imagePath(tokenImage))}" alt="Token for ${esc(actor.name)}">`, `class="gcs-token-art" data-id="${entry.id}" title="Locate token"`) : ''}
       <div class="gcs-identity-text">${btn('sheet', esc(entry.name || token?.name || actor.name), `class="gcs-character-name" data-id="${entry.id}" title="Open character sheet"`)}<small>${esc(scene)}${this.prefs.tab === 'both' ? ` · ${entry.group === 'pc' ? 'PC' : 'NPC'}` : ''}</small>${dual && token && token.name !== actor.name ? `<small>${esc(actor.name)}</small>` : ''}</div></div>
+      ${castingEffectBadges(effects)}${effectsError ? `<small class="gcs-muted">${esc(effectsError)}</small>` : ''}
       ${alerts.length ? `<div class="gcs-condition-chips">${alerts.map((a) => `<span class="gcs-alert-${a.severity}" title="${esc(a.detail)}">${esc(a.label)}</span>`).join('')}</div>` : ''}
       ${mods.length ? `<div class="gcs-mod-chips">${mods.map((m) => `<span title="${esc(m.checks === 'all' ? 'All control-sheet checks' : m.checks.join(', '))}">${esc(signed(m.value))} ${esc(m.name)}</span>`).join('')}</div>` : ''}</td>
       ${this.prefs.columns.map((c) => `<td class="${['posture', 'maneuver', 'conditions'].includes(c) ? 'gcs-text-stat' : 'gcs-number'} ${alerts.find((a) => a.stat === c) ? 'gcs-resource-alert' : ''}">${esc(values[c])}</td>`).join('')}
@@ -382,6 +442,8 @@ export class GMControlSheet extends App {
   }
   async handleAction(action, el) {
     const id = el.dataset.id;
+    if (action === 'casting-effect')
+      return manageCastingEffects(el.dataset.caster, el.dataset.effect);
     if (action === 'tab') {
       this.prefs.tab = el.dataset.tab;
       await this.save();
@@ -404,13 +466,16 @@ export class GMControlSheet extends App {
     if (action === 'settings') return this.configure();
     if (action === 'edit') return this.editEntry(id);
     if (action === 'remove') {
-      this.prefs.roster = this.prefs.roster.filter((e) => e.id !== id);
+      const source = this.sourceEntry(id);
+      this.prefs.roster = this.prefs.roster.filter(
+        (e) => e !== source && (!source?.actorUuid || e.actorUuid !== source.actorUuid),
+      );
       this.selection.delete(id);
       await this.save();
       return this.render({ force: true });
     }
     if (action === 'sheet') {
-      const row = await this.resolveEntry(this.prefs.roster.find((e) => e.id === id));
+      const row = await this.checkedRow(id);
       return row.actor?.sheet.render(true);
     }
     if (action === 'locate') return this.locate(id);
@@ -427,22 +492,30 @@ export class GMControlSheet extends App {
   }
   async addDocuments(documents, group) {
     let added = 0;
-    const existing = await Promise.all(this.prefs.roster.map((e) => this.resolveEntry(e)));
-    const documentIds = new Set(existing.map((r) => r.entry.uuid));
-    const actorIds = new Set(existing.map((r) => r.actor?.uuid).filter(Boolean));
+    const existing = await this.resolveRoster();
+    const documentIds = new Set([
+      ...this.prefs.roster.map((e) => e.uuid),
+      ...existing.map((r) => r.entry.uuid),
+    ]);
+    const actorIds = new Set(
+      [...existing.map((r) => r.actor?.uuid), ...this.prefs.roster.map((e) => e.actorUuid)].filter(
+        Boolean,
+      ),
+    );
     for (const doc of documents) {
       if (
         !['Actor', 'Token'].includes(doc?.documentName) ||
         (doc.documentName === 'Token' && !doc.actor)
       )
         continue;
-      // Keep unlinked tokens distinct.  A linked token and its actor represent
-      // one character; linking changes are still deduplicated at action time.
+      // Existing scene rows cover either add route. Distinct current tokens
+      // remain visible while duplicate saved sources are collapsed.
       const key = doc.documentName === 'Token' && doc.actorLink ? doc.actor.uuid : doc.uuid;
       if (documentIds.has(doc.uuid) || actorIds.has(key)) continue;
       this.prefs.roster.push({
         id: foundry.utils.randomID(),
         uuid: doc.uuid,
+        actorUuid: doc.documentName === 'Token' ? `Actor.${doc.actorId}` : doc.uuid,
         name: doc.name,
         group,
         adjustment: 0,
@@ -516,7 +589,7 @@ export class GMControlSheet extends App {
     if (group) await this.addDocuments([doc], group);
   }
   async locate(id) {
-    const row = await this.resolveEntry(this.prefs.roster.find((e) => e.id === id));
+    const row = await this.checkedRow(id);
     if (!row.actor) throw new Error('This character no longer exists.');
     let tokens = row.token
       ? [row.token]
@@ -834,7 +907,11 @@ export class GMControlSheet extends App {
     ui.notifications.info(`Modifiers sent to ${names.join(', ')}.`);
   }
   async editEntry(id) {
-    const entry = this.prefs.roster.find((e) => e.id === id);
+    const entry = this.sourceEntry(id);
+    if (!entry) throw new Error('This roster entry is unavailable.');
+    const followsActor = this.rows.some(
+      (r) => r.entry.sourceId === entry.id && r.entry.uuid !== entry.uuid,
+    );
     const shortcuts = [
       ...new Map(
         ['pc', 'npc'].flatMap((g) => this.prefs.shortcuts[g]).map((s) => [s.id, s]),
@@ -842,7 +919,10 @@ export class GMControlSheet extends App {
     ];
     const data = await formDialog(
       'Character options',
-      field('Display name', textInput('name', entry.name)) +
+      (followsActor
+        ? '<p>This roster entry follows its tokens on the current scene and uses the actor when none are present. These options apply to this roster source and its generated rows; each token keeps its own individual adjustment.</p>'
+        : '') +
+        field('Display name', textInput('name', entry.name)) +
         `<div class="gcs-two-col">${field('Roster', `<select name="group">${option('pc', 'PCs', entry.group === 'pc')}${option('npc', 'NPCs', entry.group === 'npc')}</select>`)}${field('Position', `<input type="number" name="position" min="1" max="${this.prefs.roster.length}" value="${this.prefs.roster.indexOf(entry) + 1}">`)}</div>` +
         field(
           'Fright Checks',
@@ -854,12 +934,14 @@ export class GMControlSheet extends App {
             field(s.label, textInput(`override-${s.id}`, entry.overrides?.[s.id] || '', s.otf)),
           )
           .join('') +
-        checkbox('remove', 'yes', 'Remove this entry from the roster'),
+        checkbox('remove', 'yes', 'Remove this character and all its roster sources'),
       'Save',
     );
     if (!data) return;
     if (data.get('remove')) {
-      this.prefs.roster = this.prefs.roster.filter((e) => e.id !== id);
+      this.prefs.roster = this.prefs.roster.filter(
+        (e) => e !== entry && (!entry.actorUuid || e.actorUuid !== entry.actorUuid),
+      );
       this.selection.delete(id);
     } else {
       const overrides = {};
@@ -896,6 +978,12 @@ export class GMControlSheet extends App {
           'yes',
           'Highlight low HP/FP and marked conditions',
           this.prefs.highlightConditions,
+        ) +
+        checkbox(
+          'showCastingEffects',
+          'yes',
+          'Show Casting Assistant effects beside characters (0.5.0+)',
+          this.prefs.showCastingEffects !== false,
         ) +
         checkbox('resetSectionSizes', 'yes', 'Reset section sizes') +
         '<p>Save changes before exporting or opening Presets.  Export uses your saved settings.</p>' +
@@ -949,6 +1037,7 @@ export class GMControlSheet extends App {
     this.prefs.columns = data.getAll('columns');
     this.prefs.shortcuts = shortcuts;
     this.prefs.highlightConditions = !!data.get('highlightConditions');
+    this.prefs.showCastingEffects = !!data.get('showCastingEffects');
     await this.save();
     await this.render({ force: true });
   }
@@ -981,7 +1070,7 @@ export class GMControlSheet extends App {
     const incoming = parseConfiguration(await file.text(), (otf) => GURPS.parselink(otf).action);
     const review = await formDialog(
       'Review configuration import',
-      `<p>This replaces your saved columns, checks, presets, and highlighting preference.</p><p><strong>Columns:</strong> ${incoming.columns.map((c) => esc(COLUMNS[c])).join(', ') || 'None'}</p>` +
+      `<p>This replaces your saved columns, checks, presets, and display preferences.</p><p><strong>Columns:</strong> ${incoming.columns.map((c) => esc(COLUMNS[c])).join(', ') || 'None'}</p>` +
         ['pc', 'npc']
           .map(
             (g) =>
@@ -1008,6 +1097,7 @@ export class GMControlSheet extends App {
             .join('; ') || 'None'
         }</p>` +
         `<p><strong>Condition highlighting:</strong> ${incoming.highlightConditions ? 'On' : 'Off'}</p>` +
+        `<p><strong>Casting Assistant effects:</strong> ${incoming.showCastingEffects ? 'On' : 'Off'}</p>` +
         '<p>Your roster, individual overrides, assigned character modifiers, and chat requests remain in this world.  Matching check names retain their local links.  Review assigned modifiers if you replace or remove checks.</p>',
       'Import configuration',
       650,

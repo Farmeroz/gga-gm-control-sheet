@@ -185,7 +185,7 @@ const assert = require('node:assert/strict');
     await choose('[data-draft=scope]', 'pc');
     await click('Request rolls');
     await click('Send request');
-    await click('Player requests');
+    await click('Requested roll results');
     const tracker = page.locator('#gcs-request-tracker');
     assert.equal(await tracker.locator('.gcs-request-state').count(), 2);
     // Simulate the native chat roll produced on another connected client, then reconcile its receipt.
@@ -201,6 +201,14 @@ const assert = require('node:assert/strict');
         flags: {
           'gga-gm-control-sheet': {
             roll: true,
+            result: {
+              version: 1,
+              target: 16,
+              total: 9,
+              margin: 7,
+              status: 'Success',
+              critical: '',
+            },
             request: requestReference(original, 0),
             check: {
               version: 1,
@@ -217,6 +225,13 @@ const assert = require('node:assert/strict');
       await sheet.tracker.render();
     });
     assert.equal(await tracker.locator('.gcs-done').count(), 1);
+    const completed = tracker.locator('tbody tr').first();
+    assert.deepEqual((await completed.locator('td').allTextContents()).slice(2, 6), [
+      '16',
+      '9',
+      'Success',
+      '7',
+    ]);
     await tracker.getByRole('button', { name: 'Remind outstanding', exact: true }).click();
     await page.waitForTimeout(100);
     assert.equal(
@@ -269,6 +284,50 @@ const assert = require('node:assert/strict');
       sheet.draft.scope = 'both';
       await sheet.render();
     });
+    // Read-only Casting Assistant summaries appear beside recipients and open the caster.
+    await page.evaluate(async () => {
+      game.modules = new Map([
+        [
+          'gga-casting-assistant',
+          {
+            active: true,
+            api: {
+              getActiveEffects: async (actorUuid) =>
+                actorUuid === 'Actor.zoe'
+                  ? [
+                      {
+                        schema: 1,
+                        actorUuid,
+                        id: 'shield',
+                        name: 'Shield of the evening watch',
+                        casterUuid: 'Actor.luke',
+                        casterName: 'Luke Morningstar',
+                        cast: false,
+                        received: true,
+                        remaining: 0,
+                        state: 'due',
+                        maintainable: true,
+                        maintenanceCost: 2,
+                        recipientNames: ['Zoé de Sancerre'],
+                        summary: 'Defence bonus recorded by the GM.',
+                      },
+                    ]
+                  : [],
+              activeEffects: (uuid) => {
+                window.openedCaster = uuid;
+              },
+            },
+          },
+        ],
+      ]);
+      await sheet.render();
+    });
+    assert.match(
+      await page.locator('.gcs-casting-effect').innerText(),
+      /Received: Shield.*Maintenance due/s,
+    );
+    await page.locator('.gcs-casting-effect').click();
+    assert.equal(await page.evaluate(() => openedCaster), 'Actor.luke');
     await page.screenshot({ path: path.join(output, 'wide.png') });
     await page.setViewportSize({ width: 760, height: 950 });
     await page.evaluate(() => {

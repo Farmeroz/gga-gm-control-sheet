@@ -29,6 +29,8 @@ const files = [
   'LICENSE.txt',
   'GGA-GM-Control-Sheet-User-Guide.pdf',
   'scripts/control-sheet.mjs',
+  'scripts/casting-effects.mjs',
+  'scripts/request-results.mjs',
   'scripts/core.mjs',
   'scripts/dialogs.mjs',
   'scripts/features.mjs',
@@ -43,6 +45,7 @@ const files = [
   'scripts/roll-modifiers.mjs',
   'scripts/rolls.mjs',
   'scripts/section-layout.mjs',
+  'scripts/roster.mjs',
   'styles/control-sheet.css',
 ];
 for (const path of [...manifest.esmodules, ...manifest.styles, manifest.readme, manifest.license]) {
