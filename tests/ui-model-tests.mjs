@@ -189,6 +189,9 @@ window.GURPS = {
 window.ChatMessage = {
   getWhisperRecipients: () => [users[0]],
   create: async (data) => {
+    data.id ||= foundry.utils.randomID();
+    data.author = users.get(data.user);
+    data.getFlag = (scope, key) => data.flags?.[scope]?.[key];
     game.messages.push(data);
     notices.push('Chat created');
     return data;
@@ -336,3 +339,32 @@ scene.tokens.splice(scene.tokens.indexOf(liveToken), 1);
 await assert.rejects(sheet.targetRows(), /scene roster changed/);
 assert.equal(sheet.rows.find((r) => r.entry.id === 'l').actor, luke);
 assert.equal(sceneRequest.uuid, liveLuke.uuid); // Already-issued requests never change their target.
+
+// Incoming activity never replaces a batch, and source/read preferences survive reopening.
+const incoming = await ChatMessage.create({
+  user: 'phil',
+  whisper: ['gm'],
+  content: '<p>Private note</p>',
+  rolls: [],
+  speaker: { alias: 'Luke' },
+});
+sheet.results = [
+  { name: 'Luke', label: 'Search', target: 14, total: 9, status: 'Success', margin: 5 },
+];
+await sheet.render();
+assert.match(sheet.html, /Private note|Open the original message/);
+assert.match(sheet.html, /Latest GM batch/);
+await sheet.handleAction('activity-source', { dataset: { source: 'player' } });
+assert.equal(sheet.prefs.activitySource, 'player');
+assert.ok(!sheet.html.includes('Latest GM batch'));
+assert.equal(sheet.results.length, 1);
+await sheet.handleAction('activity-read', { dataset: {} });
+assert.ok(sheet.prefs.activityRead.includes(incoming.id));
+const reopened = new GMControlSheet();
+assert.equal(reopened.prefs.activitySource, 'player');
+assert.ok(reopened.prefs.activityRead.includes(incoming.id));
+incoming.whisper = ['other-gm'];
+await sheet.render();
+assert.ok(!sheet.displayedActivity.some((e) => e.id === incoming.id));
+await sheet.handleAction('activity-source', { dataset: { source: 'all' } });
+assert.match(sheet.html, /Latest GM batch/);

@@ -23,10 +23,19 @@ export const helpConfig = {
     remove:
       'Remove this character’s saved roster sources and their rows. The actor and scene tokens are kept.',
     summary: 'Post a GM-only chat summary of the latest control-sheet results.',
+    'activity-source':
+      'Filter collected entries by how the roll began. GM rolled also includes ordinary messages from GMs. Your choice is remembered.',
+    'activity-read':
+      'Mark the entries currently shown as read for you. Other GMs keep their own unread status.',
+    'activity-more': 'Show more groups from messages retained in this world’s chat.',
+    'original-message':
+      'Open the original chat card without posting another message or changing its recipients.',
     tracker:
       'Open requested roll results: completion, effective targets, dice, outcomes, and margins. This view is GM-only.',
   },
   fields: {
+    collectIncoming:
+      'Collect GM-directed rolls, whispers, and responses to control-sheet requests in your results area. Does not require Roll Clarity.',
     showCastingEffects:
       'Show spells cast and effects received beside each character. Requires Casting Assistant 0.5.0 or later; click a badge to manage its caster’s effects.',
     scope:

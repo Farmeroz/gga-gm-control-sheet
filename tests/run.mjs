@@ -93,6 +93,8 @@ try {
   const files = [
     'tooltip.test.mjs',
     'core-tests.mjs',
+    'activity-tests.mjs',
+    'original-message-tests.mjs',
     'resolve-tests.mjs',
     'features-tests.mjs',
     'roster-tests.mjs',

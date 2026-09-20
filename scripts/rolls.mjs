@@ -81,6 +81,7 @@ export async function rollOne({
   includeBucket = false,
   request = null,
   managed = null,
+  batch = null,
 }) {
   return serial(async () => {
     assertRollCompatibility();
@@ -139,6 +140,7 @@ export async function rollOne({
       request,
       resolved.otf,
     );
+    context.batch = batch;
     try {
       await nativeRoll({
         actor: context.facade,
@@ -155,6 +157,7 @@ export async function rollOne({
       if (includeBucket && !game.user.isGM && autoEmpty) consumeSnapshot(bucket, snapshot);
       const result = context.result;
       return {
+        messageId: context.messageId,
         name: entry.name || actor.name,
         label: shortcut.label,
         target: result.finaltarget,

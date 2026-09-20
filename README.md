@@ -1,6 +1,6 @@
 # GGA GM Control Sheet
 
-Version 0.4.0 · For Foundry VTT 14 and GURPS 4e Game Aid 0.18.x. Requires libWrapper.
+Version 0.5.0 · For Foundry VTT 14 and GURPS 4e Game Aid 0.18.x. Requires libWrapper.
 
 View PCs and NPCs, make private GM checks, request player rolls, and apply group modifiers.
 
@@ -27,7 +27,19 @@ See the [GGA GM Control Sheet User Guide](GGA-GM-Control-Sheet-User-Guide.pdf) f
 
 With **Casting Assistant 0.6.0 or later** enabled, badges beside each character show spells they cast and pending or confirmed effects on them, with remaining time or due maintenance. Click a badge to open the original caster's Active effects window. Self-cast effects appear once. The source records remain in Casting Assistant; the GM sheet does not duplicate timers or apply bonuses. Turn badges off under **Configure → Show Casting Assistant effects beside characters**. The module continues to work without Casting Assistant.
 
-Choose **Requested roll results** beside Latest GM results to collect each request's effective targets, dice totals, outcomes, and margins alongside outstanding respondents. The panel reads the original roll messages and is available only to GMs. Blind outcomes are never copied to the shared request card. Keep both the original request and its roll messages in chat; older rolls without summary metadata are labelled accordingly. Reminders retain the original request and do not create another result.
+Choose **Requested roll results** in Rolls and messages to collect each request's effective targets, dice totals, outcomes, and margins alongside outstanding respondents. The panel reads the original roll messages and is available only to GMs. Blind outcomes are never copied to the shared request card. Keep both the original request and its roll messages in chat; older rolls without summary metadata are labelled accordingly. Reminders retain the original request and do not create another result.
+
+## Rolls and messages
+
+The bottom section collects private and blind rolls and whispers addressed to you, including rolls made outside this sheet. It also collects public responses made through its request buttons. Roll Clarity is optional.
+
+Use **All**, **GM rolled**, **GM requested**, or **Player initiated** to filter by source. Your selection is saved per GM. GM messages are included under GM rolled and labelled **GM message**. A roll made from a sheet following a verbal request is Player initiated; only a recorded request response is GM requested.
+
+Each entry shows the sender, character where available, visibility, and exact local date and time. Supported control-sheet checks include targets, totals, outcomes, and margins. Other rolls show their available total and a plain preview; use **Open original** to view the original chat card. No second chat message is posted. Blind labels keep **Player cannot see result** visible.
+
+Your latest GM batch stays together above incoming entries. Other batches and requested responses remain grouped. Confirmation receipts and GM chat summaries are excluded to avoid duplicate entries. **Unread** is personal: opening an entry marks it read, or choose **Mark shown read**. **Show more** reveals older groups.
+
+Collection is enabled by default. Turn off **Configure → Collect incoming GM rolls and messages** to keep only your own control-sheet rolls. Entries follow the original message recipients; a whisper to another GM is excluded. Keep original messages in chat to retain collected entries. Changing or deleting an original updates the collected view. The collection does not add actors to your roster or copy results to shared requests.
 
 ## Help
 
