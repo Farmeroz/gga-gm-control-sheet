@@ -33,7 +33,7 @@ export const escapeHTML = (value) =>
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
   );
 export const clone = (value) => structuredClone(value);
-export const PREFERENCES_VERSION = 2;
+export const PREFERENCES_VERSION = 3;
 export function upgradePreferences(saved = {}) {
   const prefs = { roster: [], tab: 'pc', columns: [...DEFAULT_COLUMNS], ...clone(saved) };
   prefs.shortcuts = {
@@ -59,6 +59,10 @@ export function upgradePreferences(saved = {}) {
   prefs.highlightConditions ??= true;
   prefs.showCastingEffects ??= true;
   prefs.filter ??= 'all';
+  prefs.collectIncoming ??= true;
+  if (!['all', 'gm', 'requested', 'player'].includes(prefs.activitySource))
+    prefs.activitySource = 'all';
+  if (!Array.isArray(prefs.activityRead)) prefs.activityRead = [];
   prefs.schemaVersion = PREFERENCES_VERSION;
   return prefs;
 }

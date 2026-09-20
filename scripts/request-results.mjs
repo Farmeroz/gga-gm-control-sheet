@@ -1,3 +1,4 @@
+import { readable } from './message-access.mjs';
 import { ID } from './core.mjs';
 import { matchesRequestedCheck } from './requests.mjs';
 const collection = (v) => v?.contents || Array.from(v || []);
@@ -7,7 +8,13 @@ const collection = (v) => v?.contents || Array.from(v || []);
 export async function collectedRequestResults(message) {
   if (!game.user.isGM) throw new Error('Only a GM can collect requested roll results.');
   const payload = message?.getFlag(ID, 'requestData');
-  if (!message?.author?.isGM || payload?.version !== 1 || payload.source) return [];
+  if (
+    !readable(message, game.user) ||
+    !message?.author?.isGM ||
+    payload?.version !== 1 ||
+    payload.source
+  )
+    return [];
   const found = new Map();
   const candidates = collection(game.messages)
     .filter((m) => m.getFlag(ID, 'request')?.messageId === message.id)
@@ -25,7 +32,7 @@ export async function collectedRequestResults(message) {
       !result.isRoll ||
       !result.getFlag(ID, 'roll') ||
       !payload.users.includes(result.author?.id) ||
-      result.visible === false ||
+      !readable(result, game.user) ||
       !matchesRequestedCheck(result, row, payload)
     )
       continue;

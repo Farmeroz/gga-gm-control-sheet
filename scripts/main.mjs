@@ -1,3 +1,4 @@
+import { refreshOriginals } from './original-message.mjs';
 import * as log from './log.mjs';
 import { ID } from './core.mjs';
 import { GMControlSheet } from './control-sheet.mjs';
@@ -89,15 +90,19 @@ for (const hook of [
   'deleteActiveEffect',
   'canvasReady',
 ])
-  Hooks.on(hook, () => sheet?.refresh());
+  Hooks.on(hook, () => {
+    sheet?.refresh();
+    if (hook === 'updateUser') refreshOriginals();
+  });
 Hooks.on('renderChatMessageHTML', wireRequest);
 Hooks.on('createChatMessage', (message) => {
   recordResponse(message).catch((error) => log.error('Request tracking', error));
-  sheet?.tracker?.refresh();
+  sheet?.refresh();
   refreshRequestCards();
 });
 for (const hook of ['updateChatMessage', 'deleteChatMessage'])
   Hooks.on(hook, () => {
-    sheet?.tracker?.refresh();
+    sheet?.refresh();
     refreshRequestCards();
+    refreshOriginals();
   });

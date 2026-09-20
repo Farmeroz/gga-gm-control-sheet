@@ -164,6 +164,7 @@ export async function publishRollContext(context) {
         ...data.flags?.[ID],
         roll: true,
         request: context.request,
+        batch: game.user.isGM ? context.batch || null : null,
         check: { version: 1, actorUuid: context.actor.uuid, otf: context.otf, mode: context.mode },
         result: {
           version: 1,
@@ -183,7 +184,8 @@ export async function publishRollContext(context) {
     clean.whisper = clean.blind ? ChatMessage.getWhisperRecipients('GM').map((u) => u.id) : [];
     if (clean.blind && !clean.whisper.length)
       throw new Error('No GM recipients are available; the private check was not posted.');
-    await ChatMessage.create(clean, { ...options, rollMode: context.mode });
+    const created = await ChatMessage.create(clean, { ...options, rollMode: context.mode });
+    if (data.rolls?.length) context.messageId = created?.id;
   }
 }
 

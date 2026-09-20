@@ -22,6 +22,8 @@ import { formDialog, field, numberInput, textInput, option, checkbox } from './d
 import { resolveRoll, rollOne, resultTable } from './rolls.mjs';
 import { createRequests } from './requests.mjs';
 import { RequestTracker } from './request-tracker.mjs';
+import { SOURCES, collectActivity, activityGroups, activityHTML, readable } from './activity.mjs';
+import { openOriginal } from './original-message.mjs';
 import { SectionLayout } from './section-layout.mjs';
 import { sceneRoster, rosterIdentity } from './roster.mjs';
 import {
@@ -80,6 +82,7 @@ export class GMControlSheet extends App {
       includeBucket: false,
     };
     this.results = [];
+    this.activityLimit = 30;
     this.rows = [];
     this.busy = false;
     this._saveQueue = Promise.resolve();
@@ -210,6 +213,7 @@ export class GMControlSheet extends App {
         return this.rowHTML(row, active, check, effects, effectsError);
       }),
     );
+    this.activity = await collectActivity({ includeIncoming: this.prefs.collectIncoming });
     return { visible, rendered, active };
   }
   targetEntries() {
@@ -288,10 +292,39 @@ export class GMControlSheet extends App {
       <label class="gcs-reason">Reason<input type="text" data-draft="reason" value="${esc(this.draft.reason)}" maxlength="160"></label></div>
       <div class="gcs-action-buttons"><label class="gcs-check"><input type="checkbox" data-draft="includeBucket"${this.draft.includeBucket ? ' checked' : ''}> Include my bucket in GM rolls</label><div>${btn('roll', icon('eye-slash', 'Roll as GM'), 'class="gcs-primary"')}${btn('request', icon('comment-dots', 'Request rolls'))}${btn('modifiers', icon('plus-minus', 'Group modifiers'))}</div></div>
       <p class="gcs-hint">GM rolls are private.  All PCs / All NPCs include hidden rows; choose Visible characters to follow the filter.</p></div></div>
-      <div class="gcs-divider" data-divider="1" role="separator" tabindex="0" aria-label="Resize Group actions and Latest GM results" aria-orientation="horizontal" aria-controls="gcs-group-actions gcs-latest-results" title="Drag to resize; use Up and Down arrow keys"></div>
-      <div class="gcs-results" id="gcs-latest-results" data-section="results" role="region" aria-label="Latest GM results"><div class="gcs-action-title"><strong>Latest GM results</strong><span>Visible only to you here</span>${btn('tracker', icon('list-check', 'Requested roll results'))}${this.results.length ? btn('summary', icon('comment', 'GM chat summary')) : ''}</div><div class="gcs-section-body">${this.results.length ? resultTable(this.results) : '<p class="gcs-hint">Results from your next batch will appear here.</p>'}</div></div></div>`;
+      <div class="gcs-divider" data-divider="1" role="separator" tabindex="0" aria-label="Resize Group actions and Rolls and messages" aria-orientation="horizontal" aria-controls="gcs-group-actions gcs-latest-results" title="Drag to resize; use Up and Down arrow keys"></div>
+      <div class="gcs-results" id="gcs-latest-results" data-section="results" role="region" aria-label="Rolls and messages"><div class="gcs-action-title"><strong>Rolls and messages</strong><span>Visible only to you here</span>${btn('tracker', icon('list-check', 'Requested roll results'))}${this.results.length ? btn('summary', icon('comment', 'GM chat summary')) : ''}</div><div class="gcs-section-body">${this.activityPanel()}</div></div></div>`;
     if (this.busy) root.classList.add('gcs-busy');
     return root;
+  }
+  currentResults() {
+    return this.results.filter(
+      (r) => !r.messageId || readable(game.messages?.get(r.messageId), game.user),
+    );
+  }
+  activityPanel() {
+    const source = this.prefs.activitySource;
+    const read = new Set(this.prefs.activityRead);
+    const entries = this.activity || [];
+    const unread = entries.filter((e) => e.incoming && !read.has(e.id)).length;
+    const batchResults = this.currentResults();
+    const showBatch = ['all', 'gm'].includes(source) && batchResults.length;
+    const batchIds = new Set(showBatch ? batchResults.map((r) => r.messageId).filter(Boolean) : []);
+    const groups = activityGroups(
+      entries.filter((e) => !batchIds.has(e.id)),
+      source,
+    );
+    this.displayedActivity = groups.slice(0, this.activityLimit).flat();
+    return `<nav class="gcs-activity-filters" aria-label="Roll source">${Object.entries(SOURCES)
+      .map(([key, label]) =>
+        btn('activity-source', esc(label), `data-source="${key}" aria-pressed="${source === key}"`),
+      )
+      .join('')}<span>${unread} unread</span>${btn('activity-read', 'Mark shown read')}</nav>
+      ${!this.prefs.collectIncoming ? '<p class="gcs-hint">Incoming collection is off. Enable it in Configure to include GM-directed messages and requested responses.</p>' : ''}
+      ${showBatch ? `<section class="gcs-current-batch"><h4>Latest GM batch · GM rolled · Blind to GM · Player cannot see result</h4>${resultTable(this.currentResults())}</section>` : ''}
+      ${activityHTML(groups.slice(0, this.activityLimit), this.prefs.activityRead)}
+      ${groups.length > this.activityLimit ? btn('activity-more', 'Show more') : ''}
+      ${!showBatch && !groups.length ? '<p class="gcs-hint">No collected entries in this view.</p>' : ''}`;
   }
   _replaceHTML(result, content) {
     // Do not replace a divider while a pointer is dragging it.
@@ -304,11 +337,21 @@ export class GMControlSheet extends App {
       top: el.scrollTop,
       left: el.scrollLeft,
     }));
+    const oldActivity = content.querySelector('#gcs-latest-results .gcs-section-body');
+    const anchor = Array.from(oldActivity?.querySelectorAll('[data-entry]') || []).find(
+      (node) => node.getBoundingClientRect().bottom > oldActivity.getBoundingClientRect().top,
+    );
+    const activityAnchor =
+      !this._changedSource && anchor
+        ? { id: anchor.dataset.entry, top: anchor.getBoundingClientRect().top }
+        : null;
+    this._changedSource = false;
     const oldGrid = content.querySelector('.gcs-grid');
     const scroll = { top: oldGrid?.scrollTop || 0, left: oldGrid?.scrollLeft || 0 };
     const focused = content.contains(document.activeElement) ? document.activeElement : null;
     const draftKey = focused?.dataset.draft;
     const dividerKey = focused?.dataset.divider;
+    const sourceKey = focused?.dataset.source;
     const start = focused?.selectionStart;
     content.replaceChildren(result);
     this._sectionLayout = new SectionLayout(
@@ -329,6 +372,16 @@ export class GMControlSheet extends App {
     result
       .querySelectorAll('.gcs-section-body')
       .forEach((el, i) => el.scrollTo(sectionScroll[i]?.left || 0, sectionScroll[i]?.top || 0));
+    if (activityAnchor) {
+      const newActivity = result.querySelector('#gcs-latest-results .gcs-section-body');
+      const newAnchor = Array.from(newActivity.querySelectorAll('[data-entry]')).find(
+        (node) => node.dataset.entry === activityAnchor.id,
+      );
+      if (newAnchor)
+        newActivity.scrollTop += newAnchor.getBoundingClientRect().top - activityAnchor.top;
+    }
+    if (sourceKey && Object.hasOwn(SOURCES, sourceKey))
+      result.querySelector(`[data-source="${sourceKey}"]`)?.focus({ preventScroll: true });
     if (dividerKey != null)
       result.querySelector(`[data-divider="${dividerKey}"]`)?.focus({ preventScroll: true });
     if (draftKey) {
@@ -462,6 +515,30 @@ export class GMControlSheet extends App {
     }
     if (action === 'add') return this.addActors();
     if (action === 'tokens') return this.addTokens();
+    if (action === 'activity-source') {
+      if (!Object.hasOwn(SOURCES, el.dataset.source)) return;
+      this.prefs.activitySource = el.dataset.source;
+      this._changedSource = true;
+      this.activityLimit = 30;
+      await this.save();
+      return this.render({ force: true });
+    }
+    if (action === 'activity-more') {
+      this.activityLimit += 30;
+      return this.render({ force: true });
+    }
+    if (action === 'activity-read' || action === 'original-message') {
+      const ids =
+        action === 'original-message'
+          ? [el.dataset.message]
+          : (this.displayedActivity || []).map((e) => e.id);
+      if (action === 'original-message') await openOriginal(el.dataset.message);
+      this.prefs.activityRead = [...new Set([...this.prefs.activityRead, ...ids])].filter((id) =>
+        game.messages?.get(id),
+      );
+      await this.save();
+      return this.render({ force: true });
+    }
     if (action === 'tracker') return this.openTracker();
     if (action === 'settings') return this.configure();
     if (action === 'edit') return this.editEntry(id);
@@ -487,7 +564,8 @@ export class GMControlSheet extends App {
       return ChatMessage.create({
         user: game.user.id,
         whisper: ChatMessage.getWhisperRecipients('GM').map((u) => u.id),
-        content: `<h3>GM Control Sheet</h3>${resultTable(this.results)}`,
+        content: `<h3>GM Control Sheet</h3>${resultTable(this.currentResults())}`,
+        flags: { [ID]: { summary: true } },
       });
   }
   async addDocuments(documents, group) {
@@ -624,6 +702,7 @@ export class GMControlSheet extends App {
     const shortcut = this.shortcut;
     const shared = integer(this.draft.shared);
     const reason = modifierLabel(this.draft.reason);
+    const batch = foundry.utils.randomID();
     this.busy = true;
     this.results = [];
     await this.render({ force: true });
@@ -639,6 +718,7 @@ export class GMControlSheet extends App {
               reason,
               personal: integer(row.entry.adjustment || 0),
               includeBucket: !!this.draft.includeBucket,
+              batch,
             }),
           );
         } catch (error) {
@@ -985,6 +1065,12 @@ export class GMControlSheet extends App {
           'Show Casting Assistant effects beside characters (0.5.0+)',
           this.prefs.showCastingEffects !== false,
         ) +
+        checkbox(
+          'collectIncoming',
+          'yes',
+          'Collect incoming GM rolls and messages',
+          this.prefs.collectIncoming,
+        ) +
         checkbox('resetSectionSizes', 'yes', 'Reset section sizes') +
         '<p>Save changes before exporting or opening Presets.  Export uses your saved settings.</p>' +
         '<p>One shortcut per line: <code>Label | OtF</code>.  Use a single attribute, skill, spell, or self-control roll.  Example: <code>Observation | S:"Observation"</code>.</p>' +
@@ -1038,6 +1124,7 @@ export class GMControlSheet extends App {
     this.prefs.shortcuts = shortcuts;
     this.prefs.highlightConditions = !!data.get('highlightConditions');
     this.prefs.showCastingEffects = !!data.get('showCastingEffects');
+    this.prefs.collectIncoming = !!data.get('collectIncoming');
     await this.save();
     await this.render({ force: true });
   }

@@ -1,3 +1,4 @@
+import { readable } from './message-access.mjs';
 import * as log from './log.mjs';
 import { ID, escapeHTML as esc } from './core.mjs';
 import { option } from './dialogs.mjs';
@@ -23,6 +24,7 @@ export class RequestTracker extends foundry.applications.api.ApplicationV2 {
     const requests = Array.from(game.messages.values())
       .filter(
         (m) =>
+          readable(m, game.user) &&
           m.author?.isGM &&
           m.getFlag(ID, 'requestData')?.version === 1 &&
           !m.getFlag(ID, 'requestData').source,
